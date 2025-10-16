@@ -2,7 +2,7 @@
 /**
  * Plugin Name: vIVe Hydration Intake
  * Description: Intake & consent with e-sign, SQL storage, admin view/edit/provider-sign + Full Form Builder (sections + all questions), Tools (export/import/backups), and GitHub auto-updates.
- * Version: 1.6.0
+ * Version: 1.6.1
  * Author: vIVe / Captain D + Val
  * Text Domain: vive-intake
  */
