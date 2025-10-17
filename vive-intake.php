@@ -2,7 +2,7 @@
 /**
  * Plugin Name: vIVe Hydration Intake
  * Description: Intake & consent with e-sign, SQL storage, admin view/edit/provider-sign + Full Form Builder (sections + all questions), Tools (export/import/backups), and GitHub auto-updates.
- * Version: 1.6.1
+ * Version: 1.6.5
  * Author: vIVe / Captain D + Val
  * Text Domain: vive-intake
  */
@@ -60,16 +60,16 @@ class Vive_Intake_Plugin {
     private function table_name(){ global $wpdb; return $wpdb->prefix . 'vive_intakes'; }
 
     public function activate(){
-        $this->create_or_update_table('1.6.0');
+        $this->create_or_update_table('1.6.2');
         $this->seed_builder_defaults(false);
-        $this->run_migrations('1.6.0');
+        $this->run_migrations('1.6.2');
     }
 
     public function maybe_upgrade(){
         $cur = get_option(self::OPTION_VERSION);
-        if ($cur !== '1.6.0') {
-            $this->create_or_update_table('1.6.0');
-            $this->run_migrations('1.6.0', $cur);
+        if ($cur !== '1.6.2') {
+            $this->create_or_update_table('1.6.2');
+            $this->run_migrations('1.6.2', $cur);
         }
     }
 
@@ -165,14 +165,17 @@ class Vive_Intake_Plugin {
 
     private function migrations(){
         return [
-            '1.4.0' => function(){ /* ensured extra_json existed in v1.4.0 (handled via dbDelta) */ },
-            '1.5.0' => function(){ /* v1.5.0 introduced sections/core/custom options */ },
+            '1.4.0' => function(){ /* v1.4 base (table/extra_json ensured by dbDelta) */ },
+            '1.5.0' => function(){ /* v1.5 introduced sections/core/custom options */ },
             '1.6.0' => function(){
                 if (get_option(self::OPTION_BACKUPS, null) === null) add_option(self::OPTION_BACKUPS, []);
                 foreach ([self::OPTION_SECTIONS,self::OPTION_CORE,self::OPTION_CUSTOM] as $opt) {
                     $val = get_option($opt, []);
                     if (!is_array($val)) update_option($opt, []);
                 }
+            },
+            '1.6.2' => function(){
+                // Reserved for future tweaks; keep idempotent.
             },
         ];
     }
@@ -742,7 +745,6 @@ class Vive_Intake_Plugin {
         $core = $this->get_core(true);
         $required_errors = [];
         $signature_data = null;
-        $signature_name = null;
 
         foreach ($core as $f){
             $key=$f['key']; if (!$f['enabled']) continue;
@@ -753,7 +755,6 @@ class Vive_Intake_Plugin {
                 $empty = ($f['type']==='checkbox_one') ? ($val?false:true) : (trim((string)$val)==='');
                 if ($empty) $required_errors[] = sprintf('Field "%s" is required.', $f['label']);
             }
-            if ($key==='signature_name') $signature_name = sanitize_text_field($val);
         }
         $lock_keys = ['full_name','dob','consent_treatment','consent_financial','consent_privacy','signature_name','signature_draw'];
         foreach ($lock_keys as $lk){
@@ -1042,27 +1043,23 @@ new Vive_Intake_Plugin();
 /** ========= OPTIONAL: GitHub auto-updates (Plugin Update Checker) =========
  * Repo: https://github.com/kublid/viveformplugin
  * Steps:
- *   1) Download PUC: https://github.com/YahnisElsts/plugin-update-checker
- *   2) Put the folder "plugin-update-checker" inside this plugin directory (/wp-content/plugins/vive-intake/)
- *   3) Keep your GitHub repository public (or provide token per PUC docs) and publish releases with a ZIP asset, or use tags.
+ *   1) Place the PUC library in /plugin-update-checker/ (included in this ZIP if you add it).
+ *   2) Keep your GitHub repository public (or configure auth) and publish releases with a ZIP asset, or use tags.
  */
 if (is_admin()) {
-    // If PUC is present, wire it up.
     if (file_exists(__DIR__ . '/plugin-update-checker/plugin-update-checker.php')) {
         require __DIR__ . '/plugin-update-checker/plugin-update-checker.php';
         $viveUpdateChecker = Puc_v4_Factory::buildUpdateChecker(
-            'https://github.com/kublid/viveformplugin', // GitHub repo URL
-            __FILE__,                                   // path to main plugin file
-            'vive-intake'                               // plugin slug
+            'https://github.com/kublid/viveformplugin',
+            __FILE__,
+            'vive-intake'
         );
-        // If you attach ZIPs to GitHub Releases:
         if (method_exists($viveUpdateChecker, 'getVcsApi')) {
             $api = $viveUpdateChecker->getVcsApi();
             if ($api && method_exists($api, 'enableReleaseAssets')) {
                 $api->enableReleaseAssets();
             }
         }
-        // Optional: set a branch if you don't use releases (default: master/main detection)
-        // $viveUpdateChecker->setBranch('main');
+        // $viveUpdateChecker->setBranch('main'); // uncomment if you rely on a specific branch without releases
     }
 }
